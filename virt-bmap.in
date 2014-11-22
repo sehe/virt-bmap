@@ -1,0 +1,113 @@
+#!/bin/bash -
+# virt-bmap
+# Copyright (C) 2014 Red Hat Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+# 'virt-bmap' is a shell script wrapper that runs nbdkit with the
+# right options.  Read virt-bmap(1) before trying to use this program.
+#
+# If you want to run this without installing then use the './run'
+# script in the build directory, eg:
+#
+#   ./run virt-bmap -o bmap disk.img
+
+program=virt-bmap
+version="@PACKAGE_VERSION@"
+
+output=bmap
+format=raw
+
+TEMP=`getopt \
+        -o f:o:V \
+        --long help,format:,output:,version \
+        -n $program -- "$@"`
+if [ $? != 0 ]; then
+    echo "$program: problem parsing the command line arguments"
+    exit 1
+fi
+eval set -- "$TEMP"
+
+usage ()
+{
+    echo "Usage:"
+    echo "  $program [-o bmap] [--format raw|qcow2|...] disk.img"
+    echo
+    echo "Read $program(1) man page for more information."
+    exit $1
+}
+
+while true; do
+    case "$1" in
+        -f|--format)
+            format="$2"
+            shift 2;;
+        -o|--output)
+            output="$2"
+            shift 2;;
+        -V|--version)
+            echo "$program $version"
+            exit 0;;
+        --help)
+            usage 0;;
+        --)
+            shift
+            break;;
+        *)
+            echo "internal error ($1)"
+            exit 1;;
+    esac
+done
+
+# At the moment we only support a single disk image argument.
+# Supporting multiple disk images requires adding support for export
+# names to nbdkit.
+if [ $# -ne 1 ]; then
+    echo "$program: Missing disk image argument.  See $program(1)."
+    exit 1
+fi
+
+# Turn the disk image arguments into disk=...
+declare -a disks
+for arg in "$@"; do
+    disks+=("disk=$arg")
+done
+
+# Deal with stupid autotools libdir-not-expandable crap.
+prefix="@prefix@"
+exec_prefix="@exec_prefix@"
+libdir="@libdir@"
+
+# Get the examiner plugin.
+if [ -z "$VIRTBMAP_PLUGIN_DIR" ]; then
+    VIRTBMAP_PLUGIN_DIR="$libdir"
+fi
+
+# Create the socket.
+tmpdir="$(mktemp -d)"
+cleanup ()
+{
+    rm -rf "$tmpdir" ||:
+}
+trap cleanup EXIT ERR
+socket="$tmpdir/socket"
+
+# Run nbdkit with plugin and arguments.
+nbdkit -r -f -U "$socket" \
+       "$VIRTBMAP_PLUGIN_DIR/virtbmapexaminer.so" \
+       output="$output" \
+       format="$format" \
+       socket="$socket" \
+       "${disks[@]}"

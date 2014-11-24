@@ -1,0 +1,181 @@
+=head1 NAME
+
+virt-bmap - construct a map of disk blocks to files and display files accessed by a guest on boot
+
+=head1 SUMMARY
+
+ virt-bmap [-o bmap] [--format raw|qcow2|...] disk.img
+
+ nbdkit -f bmaplogger file=disk.img [bmap=bmap] [logfile=logfile] \
+     --run ' qemu-kvm -m 2048 -hda $nbd '
+
+=head1 DESCRIPTION
+
+Virt-bmap is two tools that help you to discover where files and other
+objects are really located within a virtual machine disk image, and to
+observe what files a virtual machine accesses when it boots.
+
+=head2 virt-bmap: Construct block map from disk image
+
+The C<virt-bmap> program takes a disk image, examines it looking for
+files, directories, partitions and other significant features, and
+constructs a block map of disk offsets to files.  Use it like this:
+
+ virt-bmap --format raw disk.img
+
+=head2 Output block map file
+
+The output block map (default name: C<bmap>) is a simple text file
+which maps disk ranges to files.
+
+The mapping is not 1-1.  It is possible for multiple files to appear
+to be mapped to a single disk range, or for disk ranges not to
+correspond to any object.
+
+ 1 541400 544400 d /dev/sda1 /lost+found
+ 1 941000 941400 f /dev/sda1 /.vmlinuz-3.11.10-301.fc20.x86_64.hmac
+ 1 941400 961800 f /dev/sda1 /config-3.11.10-301.fc20.x86_64
+ 1 961800 995400 f /dev/sda1 /initrd-plymouth.img
+
+The first four columns are:
+
+=over 4
+
+=item *
+
+the disk image index (always C<1> in the current implementation),
+
+=item *
+
+the starting byte offset,
+
+=item *
+
+the ending byte offset + 1
+
+=item *
+
+the object type:
+
+=over 4
+
+=item C<'d'>
+
+directory
+
+=item C<'f'>
+
+file
+
+=item C<'p'>
+
+partition
+
+=item C<'lvm_lv'>
+
+logical volume
+
+=back
+
+=back
+
+The following column(s) identify the file or object.
+
+=head2 bmaplogger: nbdkit plugin to observe file accesses
+
+The second tool is an L<nbdkit(1)> plugin called C<bmaplogger>.  Use
+this in conjunction with "captive nbdkit" (see L<nbdkit(1)>) to
+observe the files accessed by a virtual machine when booting:
+
+ nbdkit -f bmaplogger file=disk.img bmap=bmap \
+     --run ' qemu-kvm -m 2048 -hda $nbd '
+
+=head1 VIRT-BMAP OPTIONS
+
+=over 4
+
+=item B<-f> raw|qcow|...
+
+=item B<--format> raw|qcow|...
+
+Set the format of the input disk image.  The default is C<raw>.
+
+Note this is I<not> auto-detected, you I<have to> specify the
+correct format.
+
+=item B<--help>
+
+Display brief help message and exit.
+
+=item B<-o> FILENAME
+
+=item B<--output> FILENAME
+
+Write the output (block map) to the named file.  The default is a file
+called C<bmap> in the current directory.
+
+=item B<-V>
+
+=item B<--version>
+
+Display version number and exit.
+
+=back
+
+=head1 BMAPLOGGER OPTIONS
+
+This section documents the bmaplogger plugin options.  For general
+nbdkit options see L<nbdkit(1)>.
+
+=over 4
+
+=item B<file=>disk.img
+
+(Required)
+
+The disk image.
+
+=item B<bmap=>BMAP
+
+(Optional: defaults to C<bmap>)
+
+The block map, previously prepared using C<virt-bmap>, and
+corresponding to the same disk image specified in C<file=...>
+
+=item B<logfile=>FILENAME
+
+(Optional: defaults to stdout)
+
+Send the log output to a file.
+
+=back
+
+=head1 SEE ALSO
+
+L<nbdkit(1)>,
+L<nbdkit-plugin(1)>,
+L<guestfs(3)>,
+L<http://libguestfs.org/>,
+L<http://www.redhat.com/mailman/listinfo/virt-tools-list>
+
+=head1 AUTHORS
+
+Richard W.M. Jones <rjones @ redhat . com>
+
+=head1 COPYRIGHT
+
+(C) Copyright 2014 Red Hat Inc.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.

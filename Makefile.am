@@ -39,3 +39,12 @@ virtbmapexaminer_la_SOURCES = \
 	ranges.h \
 	visit.c \
 	visit.h
+
+man_MANS = virt-bmap.1
+
+virt-bmap.1: virt-bmap.pod
+	$(POD2MAN) \
+	    -c "Virtualization Support" \
+	    --release "$(PACKAGE)-$(VERSION)" \
+	    $< > $@-t
+	mv $@-t $@

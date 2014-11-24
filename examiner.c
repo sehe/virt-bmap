@@ -612,7 +612,7 @@ print_range (uint64_t start, uint64_t end, const char *object, void *opaque)
 /* Register the nbdkit plugin. */
 
 static struct nbdkit_plugin plugin = {
-  .name              = "virtbmap",
+  .name              = "virtbmapexaminer",
   .version           = PACKAGE_VERSION,
   .config            = bmap_config,
   .config_help       = bmap_config_help,

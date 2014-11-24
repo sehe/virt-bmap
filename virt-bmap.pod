@@ -59,6 +59,18 @@ the object type:
 
 =over 4
 
+=item C<'v'>
+
+whole device
+
+=item C<'p'>
+
+partition
+
+=item C<'l'>
+
+(lowercase L) logical volume
+
 =item C<'d'>
 
 directory
@@ -66,14 +78,6 @@ directory
 =item C<'f'>
 
 file
-
-=item C<'p'>
-
-partition
-
-=item C<'lvm_lv'>
-
-logical volume
 
 =back
 

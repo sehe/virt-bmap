@@ -294,6 +294,7 @@ static int count_filesystems = 0;
 static int count_regular = 0;
 static int count_directory = 0;
 
+static int examine_devices (guestfs_h *g);
 static int examine_partitions (guestfs_h *g);
 static int examine_lvs (guestfs_h *g);
 static int examine_filesystems (guestfs_h *g);
@@ -343,6 +344,8 @@ start_thread (void *infov)
     goto error;
 
   /* Examine non-filesystem objects. */
+  if (examine_devices (g) == -1)
+    goto error;
   if (examine_partitions (g) == -1)
     goto error;
   if (examine_lvs (g) == -1)
@@ -377,6 +380,41 @@ start_thread (void *infov)
 }
 
 static int
+examine_devices (guestfs_h *g)
+{
+  CLEANUP_FREE_STRING_LIST char **devices = NULL;
+  size_t i;
+
+  /* Get list of devices. */
+  devices = guestfs_list_devices (g);
+  if (devices == NULL)
+    return -1;
+
+  for (i = 0; devices[i] != NULL; ++i) {
+    CLEANUP_FREE char *object = NULL;
+    int64_t size;
+
+    printf ("virt-bmap: examining %s ...\n", devices[i]);
+
+    if (asprintf (&object, "v %s", devices[i]) == -1)
+      return -1;
+
+    /* We don't actually bother to examine the device, which would be
+     * slow and pointless.  We just mark it in the map.
+     */
+    size = guestfs_blockdev_getsize64 (g, devices[i]);
+    if (size == -1)
+      return -1;
+
+    pthread_mutex_lock (&current_object_mutex);
+    insert_range (ranges, 0, size, object);
+    pthread_mutex_unlock (&current_object_mutex);
+  }
+
+  return 0;
+}
+
+static int
 examine_partitions (guestfs_h *g)
 {
   CLEANUP_FREE_STRING_LIST char **parts = NULL;
@@ -406,7 +444,6 @@ examine_partitions (guestfs_h *g)
   }
 
   return 0;
-
 }
 
 static int
@@ -427,7 +464,7 @@ examine_lvs (guestfs_h *g)
     printf ("virt-bmap: examining %s ...\n", lvs[i]);
     count_lvs++;
 
-    if (asprintf (&object, "lvm_lv %s", lvs[i]) == -1)
+    if (asprintf (&object, "l %s", lvs[i]) == -1)
       return -1;
 
     if (guestfs_bmap_device (g, lvs[i]) == -1)

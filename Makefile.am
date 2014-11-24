@@ -21,6 +21,7 @@ bin_SCRIPTS = virt-bmap
 
 lib_LTLIBRARIES = \
 	virtbmapexaminer.la
+
 virtbmapexaminer_la_CPPFLAGS = \
 	-I$(srcdir)
 virtbmapexaminer_la_CFLAGS = \
@@ -39,6 +40,23 @@ virtbmapexaminer_la_SOURCES = \
 	ranges.h \
 	visit.c \
 	visit.h
+
+nbdkitplugin_LTLIBRARIES = \
+	bmaplogger.la
+
+bmaplogger_la_CPPFLAGS = \
+	-I$(srcdir)
+bmaplogger_la_CFLAGS = \
+	-Wall \
+	-pthread
+bmaplogger_la_LDFLAGS = \
+	-module -avoid-version -shared
+bmaplogger_la_SOURCES = \
+	cleanups.c \
+	cleanups.h \
+	logger.c \
+	ranges.cpp \
+	ranges.h
 
 man_MANS = virt-bmap.1
 

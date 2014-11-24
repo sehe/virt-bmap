@@ -27,6 +27,7 @@ extern void *new_ranges (void);
 extern void free_ranges (void *mapv);
 extern void insert_range (void *mapv, uint64_t start, uint64_t end, const char *object);
 extern void iter_range (void *mapv, void (*f) (uint64_t start, uint64_t end, const char *object, void *opaque), void *opaque);
+extern void find_range (void *mapv, uint64_t start, uint64_t end, void (*f) (uint64_t start, uint64_t end, const char *object, void *opaque), void *opaque);
 
 #ifdef __cplusplus
 };

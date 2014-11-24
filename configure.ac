@@ -100,6 +100,16 @@ AC_CHECK_HEADER([nbdkit-plugin.h],[],[
     AC_MSG_ERROR([you need to install the nbdkit development package])
 ])
 
+dnl Get nbdkit plugin directory.
+AC_MSG_CHECKING([for nbdkit plugin directory])
+eval `$NBDKIT --dump-config`
+if test "x$plugindir" = "x"; then
+    AC_MSG_ERROR([something went wrong getting nbdkit plugin directory])
+fi
+nbdkitplugindir="$plugindir"
+AC_SUBST([nbdkitplugindir])
+AC_MSG_RESULT([$nbdkitplugindir])
+
 dnl Check for C++ boost library with interval_map.hpp
 AC_LANG_PUSH([C++])
 AC_CHECK_HEADERS([boost/icl/interval_map.hpp], [],

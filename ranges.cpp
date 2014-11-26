@@ -82,14 +82,14 @@ iter_range (void *mapv, void (*f) (uint64_t start, uint64_t end, const char *obj
 extern "C" void
 find_range (void *mapv, uint64_t start, uint64_t end, void (*f) (uint64_t start, uint64_t end, const char *object, void *opaque), void *opaque)
 {
-  ranges *map = (ranges *) mapv;
+  const ranges *map = (const ranges *) mapv;
 
   boost::icl::interval<uint64_t>::type window;
   window = boost::icl::interval<uint64_t>::right_open (start, end);
 
-  ranges r = *map & window;
+  const ranges r = *map & window;
 
-  ranges::iterator iter = r.begin ();
+  ranges::const_iterator iter = r.begin ();
   while (iter != r.end ()) {
     boost::icl::interval<uint64_t>::type range = iter->first;
     uint64_t start = range.lower ();

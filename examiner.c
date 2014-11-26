@@ -419,7 +419,8 @@ examine_partitions (guestfs_h *g)
 {
   CLEANUP_FREE_STRING_LIST char **parts = NULL;
   size_t i;
-  int r;
+  const char *argv[2];
+  char *r;
 
   /* Get partitions. */
   parts = guestfs_list_partitions (g);
@@ -428,19 +429,25 @@ examine_partitions (guestfs_h *g)
 
   for (i = 0; parts[i] != NULL; ++i) {
     CLEANUP_FREE char *object = NULL;
-
     printf ("virt-bmap: examining %s ...\n", parts[i]);
     count_partitions++;
 
     if (asprintf (&object, "p %s", parts[i]) == -1)
       return -1;
 
-    if (guestfs_bmap_device (g, parts[i]) == -1)
+    argv[0] = parts[i];
+    argv[1] = NULL;
+    r = guestfs_debug (g, "bmap_device", (char **) argv);
+    if (r == NULL)
       return -1;
+    free (r);
     mark_start (object);
-    r = guestfs_bmap (g);
+    argv[0] = NULL;
+    r = guestfs_debug (g, "bmap", (char **) argv);
     mark_end ();
-    if (r == -1) return -1;
+    if (r == NULL)
+      return -1;
+    free (r);
   }
 
   return 0;
@@ -451,7 +458,8 @@ examine_lvs (guestfs_h *g)
 {
   CLEANUP_FREE_STRING_LIST char **lvs = NULL;
   size_t i;
-  int r;
+  const char *argv[2];
+  char *r;
 
   /* Get LVs. */
   lvs = guestfs_lvs (g);
@@ -467,12 +475,19 @@ examine_lvs (guestfs_h *g)
     if (asprintf (&object, "l %s", lvs[i]) == -1)
       return -1;
 
-    if (guestfs_bmap_device (g, lvs[i]) == -1)
+    argv[0] = lvs[i];
+    argv[1] = NULL;
+    r = guestfs_debug (g, "bmap_device", (char **) argv);
+    if (r == NULL)
       return -1;
+    free (r);
     mark_start (object);
-    r = guestfs_bmap (g);
+    argv[0] = NULL;
+    r = guestfs_debug (g, "bmap", (char **) argv);
     mark_end ();
-    if (r == -1) return -1;
+    if (r == NULL)
+      return -1;
+    free (r);
   }
 
   return 0;
@@ -565,7 +580,8 @@ visit_fn (const char *dir, const char *name,
   guestfs_h *g = context->g;
   char type = '?';
   CLEANUP_FREE char *path = NULL, *object = NULL;
-  int r;
+  const char *argv[2];
+  char *r;
 
   context->files_processed++;
   if ((context->files_processed & 255) == 0) {
@@ -593,12 +609,19 @@ visit_fn (const char *dir, const char *name,
   if (type == 'f') {            /* regular file */
     count_regular++;
   bmap_file:
-    if (guestfs_bmap_file (g, path) == -1)
+    argv[0] = path;
+    argv[1] = NULL;
+    r = guestfs_debug (g, "bmap_file", (char **) argv);
+    if (r == NULL)
       return -1;
+    free (r);
     mark_start (object);
-    r = guestfs_bmap (g);
+    argv[0] = NULL;
+    r = guestfs_debug (g, "bmap", (char **) argv);
     mark_end ();
-    if (r == -1) return -1;
+    if (r == NULL)
+      return -1;
+    free (r);
   }
   else if (type == 'd') {       /* directory */
     count_directory++;

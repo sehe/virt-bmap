@@ -81,14 +81,11 @@ The code will still compile, but is likely to leak memory and other
 resources when it runs.])])
 
 dnl Check new enough libguestfs.
-PKG_CHECK_MODULES([GUESTFS], [libguestfs >= 1.28])
+PKG_CHECK_MODULES([GUESTFS], [libguestfs >= 1.29.11])
 
 dnl We need some new APIs which were added specifically for virt-bmap:
 AC_CHECK_LIB([guestfs], [guestfs_blockdev_setra], [], [
-    AC_MSG_ERROR([you need libguestfs >= 1.29.10 which has `guestfs_blockdev_setra'])
-])
-AC_CHECK_LIB([guestfs], [guestfs_bmap], [], [
-    AC_MSG_ERROR([you need libguestfs >= 1.29.10 which has `guestfs_bmap'])
+    AC_MSG_ERROR([you need libguestfs >= 1.29.11 which has new APIs for virt-bmap])
 ])
 
 dnl Check nbdkit is installed.

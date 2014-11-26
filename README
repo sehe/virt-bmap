@@ -1,5 +1,5 @@
 Virt-bmap constructs a mapping of disk block -> file for a disk image.
-It requires libguestfs >= 1.29.10, nbdkit >= 1.1, Boost, and pod2man.
+It requires libguestfs >= 1.29.11, nbdkit >= 1.1, Boost, and pod2man.
 `configure' will check the requirements.
 
 Discussion, patches, etc. on the virt-tools mailing list:

@@ -163,6 +163,8 @@ logger_unload (void)
 /* See log_operation below. */
 struct operation {
   int is_read;
+  uint32_t count;
+  uint64_t offset;
   int priority;
   uint64_t start;
   uint64_t end;
@@ -270,9 +272,21 @@ log_callback (uint64_t start, uint64_t end, const char *object, void *opaque)
 static void
 log_operation (struct handle *h, uint64_t offset, uint32_t count, int is_read)
 {
+  /* Because Boost interval_map is really bloody slow, implement a
+   * shortcut here.  We can remove this once Boost performance
+   * problems have been fixed.
+   */
+  if (h->current.is_read == is_read &&
+      h->current.count == count &&
+      h->current.offset == offset)
+    goto skip_find_range;
+
   h->current.is_read = is_read;
+  h->current.count = count;
+  h->current.offset = offset;
   h->current.priority = 0;
   find_range (ranges, offset, offset+count, log_callback, h);
+ skip_find_range:
 
   if (h->current.priority > 0) {
     FILE *fp = logfp ? logfp : stdout;

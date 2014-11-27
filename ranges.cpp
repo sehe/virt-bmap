@@ -28,6 +28,7 @@
 #include <boost/icl/interval.hpp>
 #include <boost/icl/interval_set.hpp>
 #include <boost/icl/interval_map.hpp>
+#include <boost/container/flat_set.hpp>
 
 using namespace std;
 
@@ -35,17 +36,34 @@ using namespace std;
  * string represents an object that covers that range.
  */
 
-typedef std::set<std::string> objects;
+static size_t atoms_requested = 0;
+static size_t atoms_unique_created = 0;
+
+using string_atom = const char*;
+string_atom make_atom(std::string&& s)
+{
+    static std::set<std::string> s_atoms;
+    atoms_requested += 1;
+
+    auto it = s_atoms.find(s);
+    if (it != s_atoms.end())
+        return it->c_str();
+
+    atoms_unique_created += 1;
+    return s_atoms.insert(std::move(s)).first->c_str();
+}
+
+typedef boost::container::flat_set<string_atom> objects;
 typedef boost::icl::interval_map<uint64_t, objects> ranges;
 
-void*
+ranges*
 new_ranges (void)
 {
   return new ranges ();
 }
 
 void
-free_ranges (void *mapv)
+free_ranges (ranges *mapv)
 {
   ranges *map = (ranges *) mapv;
   delete map;
@@ -57,7 +75,7 @@ insert_range (void *mapv, uint64_t start, uint64_t end, const char *object)
   ranges *map = (ranges *) mapv;
   objects obj_set;
   obj_set.insert (obj_set.end(), object);
-  map->add (make_pair (boost::icl::interval<uint64_t>::right_open (start, end),
+  map->add (std::make_pair (boost::icl::interval<uint64_t>::right_open (start, end), // SEHE added std::
                        obj_set));
 }
 
@@ -74,7 +92,7 @@ iter_range (void *mapv, void (*f) (uint64_t start, uint64_t end, const char *obj
     objects obj_set = iter->second;
     objects::iterator iter2 = obj_set.begin ();
     while (iter2 != obj_set.end ()) {
-      f (start, end, iter2->c_str (), opaque);
+      f (start, end, *iter2/*->c_str ()*/, opaque); // SEHE
       iter2++;
     }
     iter++;
@@ -100,7 +118,7 @@ find_range (void const *mapv, uint64_t start, uint64_t end, void (*f) (uint64_t 
     objects obj_set = iter->second;
     objects::iterator iter2 = obj_set.begin ();
     while (iter2 != obj_set.end ()) {
-      f (start, end, iter2->c_str (), opaque);
+      f (start, end, *iter2/*->c_str ()*/, opaque); // SEHE
       iter2++;
     }
     iter++;
@@ -132,7 +150,7 @@ find_range_ex (void const *mapv, uint64_t start, uint64_t end, void (*f) (uint64
     objects obj_set = iter->second;
     objects::iterator iter2 = obj_set.begin ();
     while (iter2 != obj_set.end ()) {
-      f (start, end, iter2->c_str (), opaque);
+      f (start, end, *iter2/*->c_str ()*/, opaque); // SEHE
       iter2++;
     }
     iter++;
@@ -158,7 +176,7 @@ bool insert_line_of_input(ranges& bmap_data, uint64_t b, uint64_t e, char type, 
     object.insert(object.begin(), ':');
     object.insert(object.begin(), type);
 #endif
-    insert_range(&bmap_data, b, e, object.c_str());
+    insert_range(&bmap_data, b, e, make_atom(std::move(object)));
     return true;
 }
 
@@ -237,6 +255,9 @@ void report_statistics(ranges const& bmap_data) {
     std::cout << "Average interval width: " << ba::mean(interval_widths)/1024.0 << "k\n" ;
     std::cout << "First:                  " << bmap_data.begin()->first         << "\n" ;
     std::cout << "Last:                   " << bmap_data.rbegin()->first        << "\n" ;
+
+    std::cout << "String atoms:           " << atoms_unique_created << " unique in " << atoms_requested << " total\n";
+    std::cout << "Atom efficiency:        " << (atoms_unique_created*100.0/atoms_requested) << "%\n";
 }
 
 void perform_comparative_benchmarks(ranges const& bmap_data, size_t number_of_queries) {
